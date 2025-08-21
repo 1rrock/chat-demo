@@ -125,6 +125,13 @@ function App() {
       setLogs((prev) => [...prev, `[오류] 메시지를 입력해주세요.`]);
       return;
     }
+
+    // 메시지 길이 제한 (Railway 비용 절약)
+    if (input.length > 1000) {
+      setLogs((prev) => [...prev, `[오류] 메시지가 너무 깁니다. (최대 1000자)`]);
+      return;
+    }
+
     if (!connected || !socketRef.current) {
       setLogs((prev) => [...prev, `[오류] 서버에 연결되지 않았습니다.`]);
       return;
