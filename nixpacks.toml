@@ -1,0 +1,7 @@
+providers = ["node"]
+
+[phases.build]
+cmds = ["echo 'This is a monorepo with server and client'"]
+
+[phases.start]
+cmd = "echo 'Please deploy server and client separately'"

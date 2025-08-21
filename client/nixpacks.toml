@@ -1,0 +1,13 @@
+providers = ["node"]
+
+[variables]
+NODE_ENV = "production"
+
+[phases.build]
+cmds = [
+  "npm ci",
+  "npm run build"
+]
+
+[phases.start]
+cmd = "npm run start"
