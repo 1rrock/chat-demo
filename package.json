@@ -1,13 +1,14 @@
 {
-  "name": "ws-chat-client",
+  "name": "ws-chat-server",
   "version": "1.0.0",
-  "description": "WebSocket Chat Client",
+  "description": "WebSocket Chat Server",
+  "main": "server/dist/main.js",
   "scripts": {
-    "install": "cd client && npm ci",
-    "build": "cd client && npm run build",
-    "start": "cd client && npm run start"
+    "install": "cd server && npm ci",
+    "build": "cd server && npm run build",
+    "start": "cd server && npm run start:prod"
   },
-  "keywords": ["websocket", "chat", "react", "socket.io"],
+  "keywords": ["websocket", "chat", "nestjs", "socket.io"],
   "author": "",
   "license": "MIT",
   "engines": {
