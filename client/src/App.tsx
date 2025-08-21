@@ -6,31 +6,28 @@ type ChatMsg = { nickname: string; text: string; ts: number };
 // URL 파라미터에서 ROOMIDX 값을 가져오는 함수
 const getRoomFromURL = () => {
   const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get('ROOMIDX') || 'general';
+  return urlParams.get('ROOMIDX') || null; // null을 반환하도록 수정
 };
 
 // 환경에 따른 서버 URL 설정
 const getServerUrl = () => {
-  // 프로덕션 환경 체크를 더 안전하게 수정
   const isProd = typeof import.meta !== 'undefined' &&
     (import.meta.env?.MODE === 'production' || import.meta.env?.PROD === true);
 
   if (isProd) {
-    // 프로덕션 환경에서는 환경변수 또는 배포된 서버 URL 사용
     return (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SERVER_URL) ||
            'https://chat-demo-production-83c1.up.railway.app';
   }
-  // 개발 환경에서는 localhost 사용
   return 'http://localhost:3000';
 };
 
 function App() {
   const [connected, setConnected] = useState(false);
-  const [room, setRoom] = useState(getRoomFromURL()); // URL 파라미터에서 초기값 설정
+  const [room, setRoom] = useState(getRoomFromURL() || 'general');
   const [nickname, setNickname] = useState('1rrock');
   const [input, setInput] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
-  const [autoJoined, setAutoJoined] = useState(false); // 자동 입장 여부 추적
+  const [isJoined, setIsJoined] = useState(false); // 입장 상태를 명확히 관리
   const socketRef = useRef<Socket | null>(null);
 
   const logsEndRef = useRef<HTMLDivElement>(null);
@@ -40,11 +37,9 @@ function App() {
 
   useEffect(() => {
     console.log('Creating socket connection...');
-
     const serverUrl = getServerUrl();
     console.log('Server URL:', serverUrl);
 
-    // Socket 연결 생성
     const socket = io(serverUrl, {
       transports: ['polling', 'websocket'],
       withCredentials: true,
@@ -55,7 +50,6 @@ function App() {
 
     socketRef.current = socket;
 
-    // 연결 관련 이벤트
     socket.on('connect', () => {
       console.log('✅ Connected to server:', socket.id);
       setConnected(true);
@@ -63,16 +57,17 @@ function App() {
 
       // URL에 ROOMIDX 파라미터가 있으면 자동으로 입장
       const urlRoom = getRoomFromURL();
-      if (urlRoom && !autoJoined) {
+      if (urlRoom && !isJoined) {
         console.log('🚪 Auto joining room from URL:', urlRoom);
+        setRoom(urlRoom);
         socket.emit('join', { room: urlRoom, nickname });
-        setAutoJoined(true);
       }
     });
 
     socket.on('disconnect', (reason) => {
       console.log('❌ Disconnected from server:', reason);
       setConnected(false);
+      setIsJoined(false); // 연결 끊어지면 입장 상태도 초기화
       setLogs((prev) => [...prev, `[시스템] 서버 연결이 끊어졌습니다. (${reason})`]);
     });
 
@@ -81,10 +76,10 @@ function App() {
       setLogs((prev) => [...prev, `[오류] 연결 실패: ${error.message}`]);
     });
 
-    // 채팅 관련 이벤트
     socket.on('joined', (data: { room: string }) => {
       console.log('✅ Joined room:', data);
-      setLogs((prev) => [...prev, `[입장] 방: ${data.room}`]);
+      setIsJoined(true); // 입장 성공 시 상태 업데이트
+      setLogs((prev) => [...prev, `[입장] 방: ${data.room}에 입장했습니다.`]);
     });
 
     socket.on('system', (text: string) => {
@@ -108,7 +103,7 @@ function App() {
       socket.off('chat');
       socket.disconnect();
     };
-  }, [nickname, autoJoined]);
+  }, []); // 의존성 배열을 비워서 무한 재연결 방지
 
   const join = () => {
     if (!nickname || !room) {
@@ -122,7 +117,7 @@ function App() {
 
     console.log('🚪 Joining room:', { room, nickname });
     socketRef.current.emit('join', { room, nickname });
-    setAutoJoined(true); // 자동 입장 상태로 변경
+    setLogs((prev) => [...prev, `[시도] ${room} 방에 입장을 시도합니다...`]);
   };
 
   const send = () => {
@@ -134,6 +129,10 @@ function App() {
       setLogs((prev) => [...prev, `[오류] 서버에 연결되지 않았습니다.`]);
       return;
     }
+    if (!isJoined) {
+      setLogs((prev) => [...prev, `[오류] 먼저 채널에 입장해주세요.`]);
+      return;
+    }
 
     console.log('💬 Sending chat:', { room, text: input });
     socketRef.current.emit('chat', { room, text: input });
@@ -141,7 +140,6 @@ function App() {
   };
 
   const onKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
-    // 한글 입력 중일 때는 Enter 이벤트를 무시
     if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
       e.preventDefault();
       send();
@@ -149,7 +147,6 @@ function App() {
   };
 
   const onKeyPress: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
-    // 한글 조합이 완료된 후 Enter 처리
     if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
       e.preventDefault();
       send();
@@ -164,6 +161,9 @@ function App() {
         <span>
           상태: <b style={{ color: connected ? 'green' : 'crimson' }}>{connected ? '연결됨' : '끊김'}</b>
         </span>
+        <span>
+          입장: <b style={{ color: isJoined ? 'blue' : 'gray' }}>{isJoined ? '입장됨' : '미입장'}</b>
+        </span>
         {socketRef.current?.id && <span style={{ fontSize: '12px', color: '#666' }}>ID: {socketRef.current.id}</span>}
       </div>
 
@@ -174,7 +174,9 @@ function App() {
           onChange={(e) => setNickname(e.target.value)}
         />
         <input placeholder="채널(방)" value={room} onChange={(e) => setRoom(e.target.value)} />
-        <button onClick={join} disabled={!connected || autoJoined}>입장</button>
+        <button onClick={join} disabled={!connected}>
+          {isJoined ? '재입장' : '입장'}
+        </button>
       </div>
 
       <div
@@ -198,14 +200,14 @@ function App() {
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
         <input
           style={{ flex: 1 }}
-          placeholder="메시지 입력 후 Enter"
+          placeholder={isJoined ? "메시지 입력 후 Enter" : "먼저 채널에 입장해주세요"}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
           onKeyPress={onKeyPress}
-          disabled={!connected}
+          disabled={!connected || !isJoined}
         />
-        <button onClick={send} disabled={!connected}>보내기</button>
+        <button onClick={send} disabled={!connected || !isJoined}>보내기</button>
       </div>
     </div>
   );
