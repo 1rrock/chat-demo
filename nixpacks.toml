@@ -3,9 +3,6 @@ providers = ["node"]
 [variables]
 NODE_ENV = "production"
 
-[phases.setup]
-cmds = ["cd client"]
-
 [phases.install]
 cmds = ["cd client && npm ci"]
 

@@ -3,11 +3,11 @@ providers = ["node"]
 [variables]
 NODE_ENV = "production"
 
+[phases.install]
+cmds = ["npm ci"]
+
 [phases.build]
-cmds = [
-  "npm ci",
-  "npm run build"
-]
+cmds = ["npm run build"]
 
 [phases.start]
 cmd = "npm run start"

@@ -6,11 +6,13 @@ type ChatMsg = { nickname: string; text: string; ts: number };
 // 환경에 따른 서버 URL 설정
 const getServerUrl = () => {
   // 프로덕션 환경 체크를 더 안전하게 수정
-  const isProd = import.meta.env?.MODE === 'production' || import.meta.env?.PROD === true;
+  const isProd = typeof import.meta !== 'undefined' &&
+    (import.meta.env?.MODE === 'production' || import.meta.env?.PROD === true);
 
   if (isProd) {
-    // 프로덕션 환경에서는 현재 호스트의 3000번 포트 사용
-    return `${window.location.protocol}//${window.location.hostname}:3000`;
+    // 프로덕션 환경에서는 환경변수 또는 배포된 서버 URL 사용
+    return (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SERVER_URL) ||
+           'https://chat-demo-production-83c1.up.railway.app';
   }
   // 개발 환경에서는 localhost 사용
   return 'http://localhost:3000';
