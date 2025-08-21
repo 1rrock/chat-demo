@@ -44,12 +44,8 @@ function App() {
       transports: ['polling', 'websocket'],
       withCredentials: true,
       autoConnect: true,
-      forceNew: false, // Railway에서 연결 재사용
-      timeout: 30000, // 타임아웃 증가
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
+      forceNew: true,
+      timeout: 20000,
     });
 
     socketRef.current = socket;
@@ -64,34 +60,20 @@ function App() {
       if (urlRoom && !isJoined) {
         console.log('🚪 Auto joining room from URL:', urlRoom);
         setRoom(urlRoom);
-        // 연결 후 약간의 지연을 두고 입장 시도
-        setTimeout(() => {
-          socket.emit('join', { room: urlRoom, nickname });
-        }, 500);
+        socket.emit('join', { room: urlRoom, nickname });
       }
     });
 
     socket.on('disconnect', (reason) => {
       console.log('❌ Disconnected from server:', reason);
       setConnected(false);
-      setIsJoined(false);
+      setIsJoined(false); // 연결 끊어지면 입장 상태도 초기화
       setLogs((prev) => [...prev, `[시스템] 서버 연결이 끊어졌습니다. (${reason})`]);
     });
 
     socket.on('connect_error', (error) => {
       console.error('❌ Connection error:', error);
-      setConnected(false);
-      setLogs((prev) => [...prev, `[오류] 연결 실패: ${error.message || '서버 연결 실패'}`]);
-    });
-
-    socket.on('reconnect', (attemptNumber) => {
-      console.log('🔄 Reconnected after', attemptNumber, 'attempts');
-      setLogs((prev) => [...prev, `[시스템] 서버에 재연결되었습니다.`]);
-    });
-
-    socket.on('reconnect_error', (error) => {
-      console.error('❌ Reconnection failed:', error);
-      setLogs((prev) => [...prev, `[오류] 재연결 실패`]);
+      setLogs((prev) => [...prev, `[오류] 연결 실패: ${error.message}`]);
     });
 
     socket.on('joined', (data: { room: string }) => {

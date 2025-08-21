@@ -5,27 +5,15 @@ import { SocketIOAdapter } from './socket-io.adapter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // CORS 설정 - 클라이언트 도메인 추가
   app.enableCors({
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'https://chat-demo-production-83c1.up.railway.app',
-      'https://splendid-clarity-production-efad.up.railway.app',
-      // 모든 Railway 서브도메인 허용
-      /^https:\/\/.*\.up\.railway\.app$/
-    ],
+    origin: true, // 모든 origin 허용 (프로덕션에서는 특정 도메인으로 제한 권장)
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
   });
 
   app.useWebSocketAdapter(new SocketIOAdapter(app));
 
-  const port = process.env.PORT || 3000;
-  await app.listen(port, '0.0.0.0');
-  console.log(`🚀 Server running on port ${port}`);
-  console.log(`📡 Socket.IO server ready for connections`);
-  console.log(`🌐 CORS enabled for Railway domains`);
+  await app.listen(3000, '0.0.0.0'); // 모든 네트워크 인터페이스에서 접근 허용
+  console.log(`Server running on http://0.0.0.0:3000`);
+  console.log(`Socket.IO server ready for connections`);
 }
 bootstrap();
