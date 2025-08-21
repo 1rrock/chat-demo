@@ -1,16 +1,7 @@
 providers = ["node"]
 
-[variables]
-NODE_ENV = "production"
-
-[phases.setup]
-cmds = ["cd server"]
-
-[phases.install]
-cmds = ["cd server && npm ci"]
-
 [phases.build]
-cmds = ["cd server && npm run build"]
+cmds = ["echo 'This is a monorepo with server and client'"]
 
 [phases.start]
-cmd = "cd server && npm run start:prod"
+cmd = "echo 'Please deploy server and client separately'"
