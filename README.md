@@ -2,33 +2,15 @@
 
 NestJS + Socket.IO 서버와 React 클라이언트를 사용한 채팅 애플리케이션입니다.
 
-## 🌐 외부 접근 가능한 배포 방법
-
-### 🚀 Railway 배포 (추천 - 무료)
-
-1. **GitHub에 코드 푸시**
-2. **Railway 사이트 접속**: https://railway.app
-3. **GitHub로 로그인 후 프로젝트 연결**
-4. **자동 배포 완료!**
-
-Railway는 WebSocket을 완벽 지원하며 무료 티어가 있습니다.
-
-### 🛠 Render 배포 (무료)
-
-1. **GitHub에 코드 푸시**
-2. **Render 사이트 접속**: https://render.com
-3. **Blueprint로 배포**: `render.yaml` 파일 사용
-4. **서버와 클라이언트 자동 배포**
-
-### ⚡ Heroku 배포
-
-```bash
-# Heroku CLI 설치 후
-heroku create your-chat-app
-git push heroku main
+## 프로젝트 구조
+```
+ws-demo/
+  server/   # NestJS 서버
+  client/   # React 클라이언트 (Vite)
+  docker-compose.yml  # Docker 배포 설정
 ```
 
-## 🏠 로컬 Docker 배포 (내부망)
+## 🚀 Docker로 배포하기 (외부 네트워크 접근 가능)
 
 ### 빠른 시작
 ```bash
@@ -91,26 +73,13 @@ NODE_ENV=production
 ### 클라우드 배포의 특징:
 1. **자동 HTTPS**: 대부분의 클라우드 플랫폼에서 자동 SSL 제공
 2. **글로벌 CDN**: 전세계 어디서나 빠른 접속
-3. **자동 스케일링**: 트래픽에 따른 자동 확장
-4. **무료 티어**: Railway, Render 등에서 무료 사용 가능
-
-### 배포 후 설정:
-1. **서버 URL 확인**: 배포된 서버의 실제 URL을 클라이언트 환경변수에 설정
-2. **CORS 검증**: 필요시 특정 도메인만 허용하도록 수정
-3. **WebSocket 테스트**: 브라우저 개발자 도구에서 연결 확인
-
-## 프로젝트 구조
-```
-ws-demo/
-  server/                 # NestJS 서버
-  client/                 # React 클라이언트 (Vite)
   docker-compose.yml      # 로컬 Docker 배포
   render.yaml            # Render 배포 설정
-  Procfile              # Railway/Heroku 배포 설정
-  vercel.json           # Vercel 설정 (제한적)
-```
-
-## WebSocket 연결 문제 해결
+### Docker 배포의 특징:
+1. **포트 매핑**: 클라이언트(80), 서버(3000)
+2. **자동 환경 감지**: 프로덕션 환경에서 자동으로 올바른 서버 URL 사용
+3. **CORS 설정**: 모든 origin에서 접근 가능
+4. **Nginx 프록시**: 클라이언트를 정적 파일로 서빙
 
 ### 개선된 기능들:
 1. **전송 방식 개선**: `polling` → `websocket` 순서로 연결 시도
@@ -125,20 +94,15 @@ ws-demo/
 2. 클라이언트에서 상태가 "연결됨"으로 변경되는지 확인
 3. 브라우저 개발자 도구 콘솔에서 연결 로그 확인
 
-## 패키지 설치 문제 해결
-
-만약 `npm install` 시 패키지 버전 오류가 발생하면:
-
+### 방화벽 설정 (필요시):
 ```bash
-# 캐시 정리 후 재시도
-npm cache clean --force
-npm install
-
-# 또는 yarn 사용
-yarn install
-```
-
-## 사용 방법
+# Ubuntu/CentOS
+sudo ufw allow 80
+sudo ufw allow 3000
+```bash
+# 또는 iptables
+sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 3000 -j ACCEPT
 
 1. 브라우저에서 배포된 URL 접속
 2. 상태가 "연결됨"인지 확인
@@ -148,7 +112,6 @@ yarn install
 
 ## 기능
 
-- 실시간 채팅 (Socket.IO 기반)
 - 채널(룸) 기반 채팅
 - 입장/퇴장 시스템 메시지
 - 연결 상태 표시 및 Socket ID 표시
@@ -176,7 +139,7 @@ yarn install
 - `Dockerfile`: 클라이언트 Docker 이미지 설정
 - `nginx.conf`: Nginx 웹서버 설정
 
-### 배포
+1. 브라우저에서 서버IP 또는 http://localhost 접속 (Docker 배포 시)
 - `docker-compose.yml`: 로컬 Docker 컨테이너 오케스트레이션
 - `render.yaml`: Render 클라우드 배포 설정
 - `Procfile`: Railway/Heroku 배포 설정
@@ -191,23 +154,22 @@ yarn install
 
 ### Docker 배포 관련
 - 포트가 이미 사용 중인 경우: `sudo netstat -tulpn | grep :80`
-- Docker 이미지 캐시 문제: `docker-compose build --no-cache`
+- Docker 컨테이너로 배포 가능
 - 컨테이너 로그 확인: `docker-compose logs -f [service_name]`
 
 ### WebSocket 연결 실패
-- 서버가 먼저 실행되고 있는지 확인
+브라우저 탭을 2~3개 열고 같은 채널명으로 입장하여 메시지를 주고받아 보세요!
 - 포트 3000이 다른 프로세스에서 사용 중인지 확인: `lsof -i :3000`
 - 브라우저 개발자 도구 Network 탭에서 Socket.IO 요청 확인
 
 ### CORS 에러
-- 서버의 `origin` 설정과 클라이언트의 `withCredentials` 설정 확인
+- `src/main.ts`: 애플리케이션 진입점, CORS 설정
 - 클라우드 환경에서는 자동으로 올바른 URL이 설정됨
 
 ### 연결은 되는데 이벤트가 안 옴
 - 이벤트 이름과 페이로드 키 확인
 - `socket.off` 누락 여부 점검
 - 서버 콘솔에서 join/chat 이벤트 로그 확인
-
+- `src/App.tsx`: React 메인 컴포넌트, Socket.IO 클라이언트
 ### 방 브로드캐스트가 안 됨
-- `client.join(room)` 호출 여부 확인
 - 같은 room 이름으로 입장했는지 확인

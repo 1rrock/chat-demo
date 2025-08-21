@@ -9,8 +9,8 @@ const getServerUrl = () => {
   const isProd = import.meta.env?.MODE === 'production' || import.meta.env?.PROD === true;
 
   if (isProd) {
-    // 프로덕션 환경에서는 환경변수 또는 현재 호스트 사용
-    return import.meta.env.VITE_SERVER_URL || `${window.location.protocol}//${window.location.hostname}:3000`;
+    // 프로덕션 환경에서는 현재 호스트의 3000번 포트 사용
+    return `${window.location.protocol}//${window.location.hostname}:3000`;
   }
   // 개발 환경에서는 localhost 사용
   return 'http://localhost:3000';

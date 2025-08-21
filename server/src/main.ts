@@ -12,9 +12,8 @@ async function bootstrap() {
 
   app.useWebSocketAdapter(new SocketIOAdapter(app));
 
-  const port = process.env.PORT || 3000;
-  await app.listen(port, '0.0.0.0'); // 환경변수 포트 지원
-  console.log(`Server running on http://0.0.0.0:${port}`);
+  await app.listen(3000, '0.0.0.0'); // 모든 네트워크 인터페이스에서 접근 허용
+  console.log(`Server running on http://0.0.0.0:3000`);
   console.log(`Socket.IO server ready for connections`);
 }
 bootstrap();
