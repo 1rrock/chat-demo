@@ -3,6 +3,12 @@ import { io, Socket } from 'socket.io-client';
 
 type ChatMsg = { nickname: string; text: string; ts: number };
 
+// URL 파라미터에서 ROOMIDX 값을 가져오는 함수
+const getRoomFromURL = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get('ROOMIDX') || 'general';
+};
+
 // 환경에 따른 서버 URL 설정
 const getServerUrl = () => {
   // 프로덕션 환경 체크를 더 안전하게 수정
@@ -20,10 +26,11 @@ const getServerUrl = () => {
 
 function App() {
   const [connected, setConnected] = useState(false);
-  const [room, setRoom] = useState('general');
+  const [room, setRoom] = useState(getRoomFromURL()); // URL 파라미터에서 초기값 설정
   const [nickname, setNickname] = useState('1rrock');
   const [input, setInput] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
+  const [autoJoined, setAutoJoined] = useState(false); // 자동 입장 여부 추적
   const socketRef = useRef<Socket | null>(null);
 
   const logsEndRef = useRef<HTMLDivElement>(null);
@@ -53,6 +60,14 @@ function App() {
       console.log('✅ Connected to server:', socket.id);
       setConnected(true);
       setLogs((prev) => [...prev, `[시스템] 서버에 연결되었습니다. (${socket.id})`]);
+
+      // URL에 ROOMIDX 파라미터가 있으면 자동으로 입장
+      const urlRoom = getRoomFromURL();
+      if (urlRoom && !autoJoined) {
+        console.log('🚪 Auto joining room from URL:', urlRoom);
+        socket.emit('join', { room: urlRoom, nickname });
+        setAutoJoined(true);
+      }
     });
 
     socket.on('disconnect', (reason) => {
@@ -93,7 +108,7 @@ function App() {
       socket.off('chat');
       socket.disconnect();
     };
-  }, []);
+  }, [nickname, autoJoined]);
 
   const join = () => {
     if (!nickname || !room) {
@@ -107,6 +122,7 @@ function App() {
 
     console.log('🚪 Joining room:', { room, nickname });
     socketRef.current.emit('join', { room, nickname });
+    setAutoJoined(true); // 자동 입장 상태로 변경
   };
 
   const send = () => {
@@ -158,7 +174,7 @@ function App() {
           onChange={(e) => setNickname(e.target.value)}
         />
         <input placeholder="채널(방)" value={room} onChange={(e) => setRoom(e.target.value)} />
-        <button onClick={join} disabled={!connected}>입장</button>
+        <button onClick={join} disabled={!connected || autoJoined}>입장</button>
       </div>
 
       <div
