@@ -125,19 +125,7 @@ function App() {
   };
 
   const onKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
-    // 한글 입력 중일 때는 Enter 이벤트를 무시
-    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-      e.preventDefault();
-      send();
-    }
-  };
-
-  const onKeyPress: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
-    // 한글 조합이 완료된 후 Enter 처리
-    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-      e.preventDefault();
-      send();
-    }
+    if (e.key === 'Enter') send();
   };
 
   return (
@@ -186,7 +174,6 @@ function App() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          onKeyPress={onKeyPress}
           disabled={!connected}
         />
         <button onClick={send} disabled={!connected}>보내기</button>
