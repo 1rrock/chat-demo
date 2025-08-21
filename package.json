@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "WebSocket Chat Client",
   "scripts": {
-    "install": "cd client && npm ci",
+    "install": "cd client && npm install",
     "build": "cd client && npm run build",
     "start": "cd client && npm run start"
   },

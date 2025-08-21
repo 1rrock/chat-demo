@@ -4,7 +4,7 @@ providers = ["node"]
 NODE_ENV = "production"
 
 [phases.install]
-cmds = ["npm ci"]
+cmds = ["npm install"]
 
 [phases.build]
 cmds = ["npm run build"]

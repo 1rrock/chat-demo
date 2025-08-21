@@ -4,7 +4,7 @@ providers = ["node"]
 NODE_ENV = "production"
 
 [phases.install]
-cmds = ["cd client && npm ci"]
+cmds = ["cd client && npm install"]
 
 [phases.build]
 cmds = ["cd client && npm run build"]
