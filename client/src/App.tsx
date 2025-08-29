@@ -179,61 +179,304 @@ function App() {
   };
 
   return (
-    <div style={{ maxWidth: 680, margin: '24px auto', fontFamily: 'system-ui' }}>
-      <h1>WS Chat (Nest + React)</h1>
+    <div style={{
+      maxWidth: 390,
+      margin: '0 auto',
+      height: '100vh',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      background: '#f8f9fa',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      {/* 토스 스타일 헤더 */}
+      <div style={{
+        background: '#ffffff',
+        padding: '12px 20px',
+        borderBottom: '1px solid #e5e8eb',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 36,
+            height: 36,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #3182f6, #1b64da)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}>
+            {room.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div style={{ fontWeight: '600', fontSize: '16px', color: '#191f28' }}>
+              {room}
+            </div>
+            <div style={{ fontSize: '12px', color: '#8b95a1' }}>
+              {connected ? '온라인' : '오프라인'} • {isJoined ? '참여중' : '미참여'}
+            </div>
+          </div>
+        </div>
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
-        <span>
-          상태: <b style={{ color: connected ? 'green' : 'crimson' }}>{connected ? '연결됨' : '끊김'}</b>
-        </span>
-        <span>
-          입장: <b style={{ color: isJoined ? 'blue' : 'gray' }}>{isJoined ? '입장됨' : '미입장'}</b>
-        </span>
-        {socketRef.current?.id && <span style={{ fontSize: '12px', color: '#666' }}>ID: {socketRef.current.id}</span>}
+        {/* 설정 버튼 */}
+        <div style={{
+          width: 32,
+          height: 32,
+          borderRadius: '50%',
+          background: '#f2f4f6',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer'
+        }}>
+          <span style={{ fontSize: '16px' }}>⚙️</span>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <input
-          placeholder="닉네임"
-          value={nickname}
-          onChange={(e) => setNickname(e.target.value)}
-        />
-        <input placeholder="채널(방)" value={room} onChange={(e) => setRoom(e.target.value)} />
-        <button onClick={join} disabled={!connected}>
-          {isJoined ? '재입장' : '입장'}
-        </button>
-      </div>
+      {/* 입장 영역 - 미입장시에만 표시 */}
+      {!isJoined && (
+        <div style={{
+          background: '#ffffff',
+          margin: '12px 16px',
+          padding: '20px',
+          borderRadius: '16px',
+          border: '1px solid #e5e8eb'
+        }}>
+          <div style={{ marginBottom: '16px', textAlign: 'center' }}>
+            <div style={{ fontSize: '18px', fontWeight: '600', color: '#191f28', marginBottom: '8px' }}>
+              채팅방 입장
+            </div>
+            <div style={{ fontSize: '14px', color: '#8b95a1' }}>
+              닉네임을 입력하고 채팅을 시작하세요
+            </div>
+          </div>
 
-      <div
-        style={{
-          border: '1px solid #ccc',
-          borderRadius: 8,
-          padding: 12,
-          height: 360,
-          overflow: 'auto',
-          background: '#111',
-          color: '#eee',
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-        }}
-      >
-        {logs.map((l, i) => (
-          <div key={i}>{l}</div>
-        ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <input
+              style={{
+                padding: '16px',
+                border: '1px solid #e5e8eb',
+                borderRadius: '12px',
+                fontSize: '16px',
+                outline: 'none',
+                transition: 'border-color 0.2s',
+                background: '#ffffff'
+              }}
+              placeholder="닉네임 입력"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              onFocus={(e) => e.target.style.borderColor = '#3182f6'}
+              onBlur={(e) => e.target.style.borderColor = '#e5e8eb'}
+            />
+
+            <input
+              style={{
+                padding: '16px',
+                border: '1px solid #e5e8eb',
+                borderRadius: '12px',
+                fontSize: '16px',
+                outline: 'none',
+                transition: 'border-color 0.2s',
+                background: '#ffffff'
+              }}
+              placeholder="채팅방 이름"
+              value={room}
+              onChange={(e) => setRoom(e.target.value)}
+              onFocus={(e) => e.target.style.borderColor = '#3182f6'}
+              onBlur={(e) => e.target.style.borderColor = '#e5e8eb'}
+            />
+
+            <button
+              onClick={join}
+              disabled={!connected || !nickname.trim() || !room.trim()}
+              style={{
+                padding: '16px',
+                background: (!connected || !nickname.trim() || !room.trim()) ? '#e5e8eb' : '#3182f6',
+                color: (!connected || !nickname.trim() || !room.trim()) ? '#8b95a1' : 'white',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: (!connected || !nickname.trim() || !room.trim()) ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              입장하기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 채팅 메시지 영역 */}
+      <div style={{
+        flex: 1,
+        padding: '0 16px',
+        overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        paddingTop: '12px',
+        paddingBottom: '12px'
+      }}>
+        {logs.map((log, i) => {
+          // 시스템 메시지 파싱
+          if (log.includes('[시스템]') || log.includes('[입장]') || log.includes('[오류]')) {
+            const isError = log.includes('[오류]');
+            return (
+              <div key={i} style={{
+                textAlign: 'center',
+                margin: '8px 0'
+              }}>
+                <span style={{
+                  background: isError ? '#fee' : '#f0f0f0',
+                  color: isError ? '#d32f2f' : '#666',
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  display: 'inline-block'
+                }}>
+                  {log.replace(/\[(시스템|입장|오류)\]/, '')}
+                </span>
+              </div>
+            );
+          }
+
+          // 채팅 메시지 파싱
+          const chatMatch = log.match(/^(\d{1,2}:\d{2}:\d{2})\s+<(.+?)>\s+(.+)$/);
+          if (chatMatch) {
+            const [, time, nick, message] = chatMatch;
+            const isMyMessage = nick === nickname;
+
+            return (
+              <div key={i} style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: isMyMessage ? 'flex-end' : 'flex-start',
+                marginBottom: '4px'
+              }}>
+                {!isMyMessage && (
+                  <div style={{
+                    fontSize: '12px',
+                    color: '#8b95a1',
+                    marginBottom: '4px',
+                    marginLeft: '8px'
+                  }}>
+                    {nick}
+                  </div>
+                )}
+
+                <div style={{
+                  maxWidth: '70%',
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  gap: '6px',
+                  flexDirection: isMyMessage ? 'row-reverse' : 'row'
+                }}>
+                  <div style={{
+                    background: isMyMessage ? '#3182f6' : '#ffffff',
+                    color: isMyMessage ? 'white' : '#191f28',
+                    padding: '12px 16px',
+                    borderRadius: isMyMessage ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
+                    fontSize: '15px',
+                    lineHeight: '1.4',
+                    border: isMyMessage ? 'none' : '1px solid #e5e8eb',
+                    wordBreak: 'break-word'
+                  }}>
+                    {message}
+                  </div>
+
+                  <div style={{
+                    fontSize: '11px',
+                    color: '#8b95a1',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {time}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // 기타 메시지
+          return (
+            <div key={i} style={{
+              textAlign: 'center',
+              fontSize: '12px',
+              color: '#8b95a1',
+              margin: '4px 0'
+            }}>
+              {log}
+            </div>
+          );
+        })}
         <div ref={logsEndRef} />
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <input
-          style={{ flex: 1 }}
-          placeholder={isJoined ? "메시지 입력 후 Enter" : "먼저 채널에 입장해주세요"}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onKeyDown}
-          onKeyPress={onKeyPress}
-          disabled={!connected || !isJoined}
-        />
-        <button onClick={send} disabled={!connected || !isJoined}>보내기</button>
-      </div>
+      {/* 입력창 영역 */}
+      {isJoined && (
+        <div style={{
+          background: '#ffffff',
+          padding: '12px 16px 20px',
+          borderTop: '1px solid #e5e8eb'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-end',
+            gap: '8px',
+            background: '#f2f4f6',
+            borderRadius: '24px',
+            padding: '8px 12px'
+          }}>
+            <input
+              style={{
+                flex: 1,
+                border: 'none',
+                outline: 'none',
+                background: 'transparent',
+                fontSize: '16px',
+                padding: '8px 4px',
+                color: '#191f28',
+                minHeight: '20px',
+                resize: 'none'
+              }}
+              placeholder="메시지를 입력하세요..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={onKeyDown}
+              onKeyPress={onKeyPress}
+              disabled={!connected}
+            />
+
+            <button
+              onClick={send}
+              disabled={!connected || !input.trim()}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                border: 'none',
+                background: (!connected || !input.trim()) ? '#e5e8eb' : '#3182f6',
+                color: 'white',
+                cursor: (!connected || !input.trim()) ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '16px',
+                transition: 'all 0.2s'
+              }}
+            >
+              ➤
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
