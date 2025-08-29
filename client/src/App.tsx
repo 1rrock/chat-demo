@@ -22,7 +22,7 @@ function App() {
 
   const [connected, setConnected] = useState(false);
   const [room, setRoom] = useState(getRoomFromURL() || 'general');
-  const [nickname, setNickname] = useState('1rrock');
+  const [nickname, setNickname] = useState('guest' + Math.floor(Math.random() * 1000));
   const [input, setInput] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
   const [messages, setMessages] = useState<ChatMsg[]>([]); // chat payload 보관
