@@ -4,25 +4,20 @@ import { io, Socket } from 'socket.io-client';
 type ChatMsg = { nickname: string; text: string; ts: number };
 
 function App() {
-  // URL 파라미터에서 ROOMIDX 또는 room 값을 읽어 방 이름 반환
-  const getRoomFromURL = (): string | null => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const val = params.get('ROOMIDX') || params.get('room') || params.get('channel');
-      return val && val.trim() ? val.trim() : null;
-    } catch {
-      return null;
-    }
+  const getRoomFromURL = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('ROOMIDX') || null; // null을 반환하도록 수정
   };
 
-  // 실행 환경에 맞는 서버 URL 결정
-  const getServerUrl = (): string => {
-    const env: any = (import.meta as any)?.env || {};
-    const explicit = env?.VITE_SERVER_URL;
-    if (explicit && typeof explicit === 'string' && explicit.trim()) return explicit.trim();
-    // 프로덕션이면 동일 오리진, 개발이면 localhost:3000
-    const isProd = !!(env?.MODE === 'production' || env?.PROD);
-    return isProd ? window.location.origin : 'http://localhost:3000';
+  const getServerUrl = () => {
+    const isProd = typeof import.meta !== 'undefined' &&
+        (import.meta.env?.MODE === 'production' || import.meta.env?.PROD === true);
+
+    if (isProd) {
+      return (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SERVER_URL) ||
+          'https://chat-demo-production-83c1.up.railway.app';
+    }
+    return 'http://localhost:3000';
   };
 
   const [connected, setConnected] = useState(false);
