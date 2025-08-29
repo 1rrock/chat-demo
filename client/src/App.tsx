@@ -3,30 +3,34 @@ import { io, Socket } from 'socket.io-client';
 
 type ChatMsg = { nickname: string; text: string; ts: number };
 
-// URL 파라미터에서 ROOMIDX 값을 가져오는 함수
-const getRoomFromURL = () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get('ROOMIDX') || null; // null을 반환하도록 수정
-};
-
-// 환경에 따른 서버 URL 설정
-const getServerUrl = () => {
-  const isProd = typeof import.meta !== 'undefined' &&
-    (import.meta.env?.MODE === 'production' || import.meta.env?.PROD === true);
-
-  if (isProd) {
-    return (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SERVER_URL) ||
-           'https://chat-demo-production-83c1.up.railway.app';
-  }
-  return 'http://localhost:3000';
-};
-
 function App() {
+  // URL 파라미터에서 ROOMIDX 또는 room 값을 읽어 방 이름 반환
+  const getRoomFromURL = (): string | null => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const val = params.get('ROOMIDX') || params.get('room') || params.get('channel');
+      return val && val.trim() ? val.trim() : null;
+    } catch {
+      return null;
+    }
+  };
+
+  // 실행 환경에 맞는 서버 URL 결정
+  const getServerUrl = (): string => {
+    const env: any = (import.meta as any)?.env || {};
+    const explicit = env?.VITE_SERVER_URL;
+    if (explicit && typeof explicit === 'string' && explicit.trim()) return explicit.trim();
+    // 프로덕션이면 동일 오리진, 개발이면 localhost:3000
+    const isProd = !!(env?.MODE === 'production' || env?.PROD);
+    return isProd ? window.location.origin : 'http://localhost:3000';
+  };
+
   const [connected, setConnected] = useState(false);
   const [room, setRoom] = useState(getRoomFromURL() || 'general');
   const [nickname, setNickname] = useState('1rrock');
   const [input, setInput] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
+  const [messages, setMessages] = useState<ChatMsg[]>([]); // chat payload 보관
   const [isJoined, setIsJoined] = useState(false); // 입장 상태를 명확히 관리
   const socketRef = useRef<Socket | null>(null);
 
@@ -34,6 +38,11 @@ function App() {
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
+  // messages 변경 시에도 스크롤 하단 고정
+  const msgsEndRef = logsEndRef; // 동일 ref 재사용
+  useEffect(() => {
+    msgsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   useEffect(() => {
     console.log('Creating socket connection...');
@@ -107,8 +116,8 @@ function App() {
 
     socket.on('chat', (msg: ChatMsg) => {
       console.log('💬 Chat message:', msg);
-      const time = new Date(msg.ts).toLocaleTimeString();
-      setLogs((prev) => [...prev, `${time} <${msg.nickname}> ${msg.text}`]);
+      setMessages((prev) => [...prev, msg]); // payload로 직접 렌더
+      // 로그 문자열은 더 이상 추가하지 않음 (중앙 정렬 이슈 방지)
     });
 
     return () => {
@@ -164,14 +173,8 @@ function App() {
     setInput('');
   };
 
+  // Enter 키 처리 (onKeyPress 제거)
   const onKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
-    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-      e.preventDefault();
-      send();
-    }
-  };
-
-  const onKeyPress: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
     if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
       e.preventDefault();
       send();
@@ -321,98 +324,72 @@ function App() {
         overflow: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px',
         paddingTop: '12px',
-        paddingBottom: '12px'
+        paddingBottom: '12px',
+        background: '#f8f9fa'
       }}>
-        {logs.map((log, i) => {
-          // 시스템 메시지 파싱
-          if (log.includes('[시스템]') || log.includes('[입장]') || log.includes('[오류]')) {
-            const isError = log.includes('[오류]');
-            return (
-              <div key={i} style={{
-                textAlign: 'center',
-                margin: '8px 0'
+        {/* 시스템 배지들 (순서 보장은 안되지만 시안 유지) */}
+        {logs.filter(l => l.includes('[시스템]') || l.includes('[입장]') || l.includes('[오류]') || l.includes('[시도]')).map((log, i) => {
+          const isError = log.includes('[오류]');
+          return (
+            <div key={`sys-${i}`} style={{ textAlign: 'center', margin: '10px 0' }}>
+              <span style={{
+                background: isError ? '#fee2e2' : '#f3f4f6',
+                color: isError ? '#dc2626' : '#6b7280',
+                padding: '6px 12px',
+                borderRadius: 20,
+                fontSize: 12,
+                display: 'inline-block',
+                fontWeight: 500
               }}>
-                <span style={{
-                  background: isError ? '#fee' : '#f0f0f0',
-                  color: isError ? '#d32f2f' : '#666',
-                  padding: '6px 12px',
-                  borderRadius: '20px',
-                  fontSize: '12px',
-                  display: 'inline-block'
-                }}>
-                  {log.replace(/\[(시스템|입장|오류)\]/, '')}
-                </span>
-              </div>
-            );
-          }
+                {log.replace(/\[(시스템|입장|오류|시도)\]/, '').trim()}
+              </span>
+            </div>
+          );
+        })}
 
-          // 채팅 메시지 파싱
-          const chatMatch = log.match(/^(\d{1,2}:\d{2}:\d{2})\s+<(.+?)>\s+(.+)$/);
-          if (chatMatch) {
-            const [, time, nick, message] = chatMatch;
-            const isMyMessage = nick === nickname;
-
-            return (
-              <div key={i} style={{
+        {/* 채팅 말풍선 (payload 기반) */}
+        {messages.map((m, i) => {
+          const isMine = m.nickname.trim().toLowerCase() === nickname.trim().toLowerCase();
+          const time = new Date(m.ts).toLocaleTimeString();
+          return (
+            <div key={`msg-${i}`} style={{
+              display: 'flex',
+              justifyContent: isMine ? 'flex-end' : 'flex-start',
+              marginBottom: 12,
+              width: '100%',
+              alignItems: 'flex-end'
+            }}>
+              <div style={{
+                maxWidth: '75%',
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: isMyMessage ? 'flex-end' : 'flex-start',
-                marginBottom: '4px'
+                alignItems: isMine ? 'flex-end' : 'flex-start'
               }}>
-                {!isMyMessage && (
-                  <div style={{
-                    fontSize: '12px',
-                    color: '#8b95a1',
-                    marginBottom: '4px',
-                    marginLeft: '8px'
-                  }}>
-                    {nick}
-                  </div>
+                {!isMine && (
+                  <div style={{ fontSize: 12, color: '#8b95a1', margin: '0 0 4px 8px' }}>{m.nickname}</div>
                 )}
-
                 <div style={{
-                  maxWidth: '70%',
                   display: 'flex',
+                  gap: 6,
                   alignItems: 'flex-end',
-                  gap: '6px',
-                  flexDirection: isMyMessage ? 'row-reverse' : 'row'
+                  flexDirection: isMine ? 'row-reverse' : 'row'
                 }}>
                   <div style={{
-                    background: isMyMessage ? '#3182f6' : '#ffffff',
-                    color: isMyMessage ? 'white' : '#191f28',
-                    padding: '12px 16px',
-                    borderRadius: isMyMessage ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                    fontSize: '15px',
-                    lineHeight: '1.4',
-                    border: isMyMessage ? 'none' : '1px solid #e5e8eb',
-                    wordBreak: 'break-word'
+                    background: isMine ? '#3182f6' : '#f1f3f4',
+                    color: isMine ? '#ffffff' : '#191f28',
+                    padding: '10px 14px',
+                    borderRadius: isMine ? '18px 18px 6px 18px' : '18px 18px 18px 6px',
+                    boxShadow: isMine ? '0 1px 2px rgba(49,130,246,.25)' : '0 1px 2px rgba(0,0,0,.06)',
+                    wordBreak: 'break-word',
+                    lineHeight: 1.45,
+                    fontSize: 15,
                   }}>
-                    {message}
+                    {m.text}
                   </div>
-
-                  <div style={{
-                    fontSize: '11px',
-                    color: '#8b95a1',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {time}
-                  </div>
+                  <div style={{ fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap', marginBottom: 2 }}>{time}</div>
                 </div>
               </div>
-            );
-          }
-
-          // 기타 메시지
-          return (
-            <div key={i} style={{
-              textAlign: 'center',
-              fontSize: '12px',
-              color: '#8b95a1',
-              margin: '4px 0'
-            }}>
-              {log}
             </div>
           );
         })}
@@ -421,59 +398,17 @@ function App() {
 
       {/* 입력창 영역 */}
       {isJoined && (
-        <div style={{
-          background: '#ffffff',
-          padding: '12px 16px 20px',
-          borderTop: '1px solid #e5e8eb'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'flex-end',
-            gap: '8px',
-            background: '#f2f4f6',
-            borderRadius: '24px',
-            padding: '8px 12px'
-          }}>
+        <div style={{ background: '#ffffff', padding: '12px 16px 20px', borderTop: '1px solid #e5e8eb' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, background: '#f2f4f6', borderRadius: 24, padding: '8px 12px' }}>
             <input
-              style={{
-                flex: 1,
-                border: 'none',
-                outline: 'none',
-                background: 'transparent',
-                fontSize: '16px',
-                padding: '8px 4px',
-                color: '#191f28',
-                minHeight: '20px',
-                resize: 'none'
-              }}
+              style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 16, padding: '8px 4px', color: '#191f28' }}
               placeholder="메시지를 입력하세요..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
-              onKeyPress={onKeyPress}
               disabled={!connected}
             />
-
-            <button
-              onClick={send}
-              disabled={!connected || !input.trim()}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                border: 'none',
-                background: (!connected || !input.trim()) ? '#e5e8eb' : '#3182f6',
-                color: 'white',
-                cursor: (!connected || !input.trim()) ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '16px',
-                transition: 'all 0.2s'
-              }}
-            >
-              ➤
-            </button>
+            <button onClick={send} disabled={!connected || !input.trim()} style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: (!connected || !input.trim()) ? '#e5e8eb' : '#3182f6', color: '#fff', cursor: (!connected || !input.trim()) ? 'not-allowed' : 'pointer' }}>➤</button>
           </div>
         </div>
       )}
